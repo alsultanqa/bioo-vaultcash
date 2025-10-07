@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qc-backend-webhooks
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # WAF: Relax for webhook endpoint (remove noisy CRS rules)
+    {{- if .Values.ingress.waf.enabled }}
+    nginx.ingress.kubernetes.io/modsecurity: "on"
+    nginx.ingress.kubernetes.io/location-snippet: |
+      ModSecurityRuleRemoveById 942100 941100 913100
+    {{- end }}
+    # IP allowlist for webhook sources (optional)
+    {{- if .Values.ingress.webhooks.ipAllowlist }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: "{{ .Values.ingress.webhooks.ipAllowlist }}"
+    {{- end }}
+spec:
+  tls:
+    - hosts: [ {{ .Values.ingress.host | quote }} ]
+      secretName: {{ .Values.ingress.tlsSecret }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /webhooks
+            pathType: Prefix
+            backend:
+              service:
+                name: qc-backend
+                port: { number: 80 }

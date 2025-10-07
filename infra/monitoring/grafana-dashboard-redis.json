@@ -1,0 +1,42 @@
+{
+  "title": "QatarCash \u2014 Redis Overview",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Ops/sec",
+      "targets": [
+        {
+          "expr": "rate(redis_commands_processed_total[5m])"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Connected Clients",
+      "targets": [
+        {
+          "expr": "redis_connected_clients"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Keyspace Hits Ratio (%)",
+      "targets": [
+        {
+          "expr": "100 * (rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])))"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Memory Used (bytes)",
+      "targets": [
+        {
+          "expr": "redis_memory_used_bytes"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 36
+}

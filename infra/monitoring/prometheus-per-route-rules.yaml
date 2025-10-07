@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: qc-per-route-rules
+  labels: { release: prometheus }
+spec:
+  groups:
+    - name: qc-per-route
+      rules:
+        - record: qc:http_requests_total:rate5m
+          expr: sum by (route, status_code) (rate(http_requests_total[5m]))
+        - record: qc:http_errors_5xx:rate5m
+          expr: sum by (route) (rate(http_requests_total{status_code=~"5.."}[5m]))
+        - record: qc:http_latency_p95
+          expr: histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket[5m])))
+        - alert: QcRouteHigh5xx
+          expr: qc:http_errors_5xx:rate5m / ignoring(status_code) sum by (route) (rate(http_requests_total[5m])) > 0.03
+          for: 10m
+          labels: { severity: page }
+          annotations:
+            summary: "High 5xx on route {{`{{ $labels.route }}`}} >3%"
+            description: "Investigate recent deploys and upstream dependencies for this route."

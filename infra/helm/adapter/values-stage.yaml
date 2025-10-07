@@ -1,0 +1,15 @@
+image:
+  repository: your-registry/qc-backend
+  tag: stage
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3001
+config:
+  QC_HEADERS_SIGNATURE_NAME: x-qc-signature
+  QC_SIGNATURE_ALG: sha256
+  IDEMPOTENCY_TTL_SECONDS: "86400"
+secrets:
+  JWT_SECRET: change_me_stage
+  DATABASE_URL: postgres://user:pass@postgres.stage.svc.cluster.local:5432/qatarchash
+  REDIS_URL: redis://redis.stage.svc.cluster.local:6379

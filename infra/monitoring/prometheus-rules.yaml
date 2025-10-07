@@ -1,0 +1,38 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: qc-slo-rules
+  labels: { release: prometheus }
+spec:
+  groups:
+    - name: qc-api-slo
+      rules:
+        - record: job:http_requests:rate5m
+          expr: sum by (status) (rate(http_requests_total[5m]))
+        - record: job:http_request_errors:rate5m
+          expr: sum(rate(http_requests_total{code=~"5.."}[5m]))
+        - record: job:http_request_latency_p95
+          expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))
+        - alert: QcHighErrorRate
+          expr: sum(rate(http_requests_total{code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.02
+          for: 10m
+          labels: { severity: page }
+          annotations:
+            summary: "High 5xx error rate (>2% for 10m)"
+            description: "Investigate API /webhooks latency, upstream acquirer, Redis."
+        - alert: QcSlowLatencyP95
+          expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{route!~"/health"}[10m]))) > 0.5
+          for: 10m
+          labels: { severity: ticket }
+          annotations:
+            summary: "p95 latency > 500ms for 10m"
+            description: "Check pods CPU/memory, HPA events, acquirer upstream."
+    - name: qc-webhook-slo
+      rules:
+        - alert: QcWebhookDeliveryDrop
+          expr: increase(qc_webhook_deliveries_total{status="failed"}[10m]) > 5
+          for: 10m
+          labels: { severity: ticket }
+          annotations:
+            summary: "Webhook failures spiked"
+            description: "Failed deliveries in last 10m > 5"

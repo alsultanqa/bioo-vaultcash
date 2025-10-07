@@ -1,0 +1,45 @@
+image: { repository: your-registry/qc-backend, tag: latest, pullPolicy: IfNotPresent }
+replicaCount: 1
+service: { type: ClusterIP, port: 80, targetPort: 3001 }
+ingress:
+  enabled: false
+config:
+  QC_HEADERS_SIGNATURE_NAME: x-qc-signature
+  QC_SIGNATURE_ALG: sha256
+  IDEMPOTENCY_TTL_SECONDS: "86400"
+secrets:
+  QC_API_KEY: qc_live_xxx
+  QC_API_SECRET: qc_secret_xxx
+  REDIS_URL: redis://redis:6379
+
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 60
+
+pdb:
+  minAvailable: 1
+
+networkPolicy:
+  ingressNamespace: ingress-nginx
+  redisNamespace: default
+
+
+ingress:
+  enabled: true
+  host: api.example.com
+  tlsSecret: qc-backend-tls
+  mtls:
+    enabled: false
+    clientCaSecret: qc-client-ca  # create secret with client CA cert for mTLS
+
+
+# Web Application Firewall toggle
+ingress:
+  waf:
+    enabled: false
+
+ingress:
+  webhooks:
+    ipAllowlist: ""  # e.g., 203.0.113.0/24,198.51.100.10/32

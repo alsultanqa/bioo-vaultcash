@@ -1,0 +1,12 @@
+route:
+  receiver: default
+  routes:
+    - matchers: [severity="page"]
+      receiver: oncall
+receivers:
+  - name: default
+  - name: oncall
+    slack_configs:
+      - api_url: ${SLACK_WEBHOOK_URL}
+        channel: '#oncall'
+templates: []

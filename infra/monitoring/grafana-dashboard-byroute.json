@@ -1,0 +1,33 @@
+{
+  "title": "QatarCash \u2014 API by Route",
+  "panels": [
+    {
+      "type": "table",
+      "title": "Requests by route & status (5m rate)",
+      "targets": [
+        {
+          "expr": "qc:http_requests_total:rate5m"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Per-route 5xx rate",
+      "targets": [
+        {
+          "expr": "qc:http_errors_5xx:rate5m"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Latency p95 by route (s)",
+      "targets": [
+        {
+          "expr": "qc:http_latency_p95"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 36
+}
