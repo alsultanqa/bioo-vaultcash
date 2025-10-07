@@ -5,27 +5,18 @@ import crypto from 'crypto';
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = process.env.SEED_EMAIL || 'owner@qatarchash.local';
-  const pass  = process.env.SEED_PASSWORD || 'ChangeMe123!';
+  const email = 'owner@qatarchash.local';
+  const pass  = 'ChangeMe123!';
   const hash = await bcrypt.hash(pass, 12);
-
-  const user = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email }, update: {},
     create: { email, password: hash, role: 'OWNER' }
   });
-
-  const merchant = await prisma.merchant.upsert({
-    where: { id: 'seed-merchant' }, update: {},
-    create: { id: 'seed-merchant', name: 'QatarCash Demo', city: 'Doha' }
+  const token = crypto.randomBytes(10).toString('hex');
+  const paymentId = 'pay_' + crypto.randomBytes(8).toString('hex');
+  await prisma.paymentLink.create({
+    data: { token, paymentId, checkoutUrl: 'http://localhost:3001/pay/'+token, orderId: 'SEED-1001', amount: 1500, currency: 'QAR', status: 'created' }
   });
-
-  const apiKey = await prisma.apiKey.create({
-    data: {
-      key: 'qc_test_' + crypto.randomBytes(8).toString('hex'),
-      label: 'Default', environment: 'test', merchantId: merchant.id
-    }
-  });
-
-  console.log({ login: { email, pass }, apiKey: apiKey.key });
+  console.log({ login: { email, pass }, seededPaymentLink: token });
 }
-main().finally(() => prisma.$disconnect());
+main().finally(()=>prisma.$disconnect());

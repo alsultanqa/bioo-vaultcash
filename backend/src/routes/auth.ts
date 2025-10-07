@@ -2,9 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import { prisma } from '../db';
 import { signJwt } from '../auth/jwt';
-
 const r = Router();
-
 r.post('/login', async (req, res) => {
   const { email, password } = req.body || {};
   if(!email || !password) return res.status(400).json({ error: 'missing_fields' });
@@ -15,5 +13,4 @@ r.post('/login', async (req, res) => {
   const token = signJwt({ id: u.id, email: u.email, role: u.role as any });
   res.json({ token, user: { id: u.id, email: u.email, role: u.role } });
 });
-
 export default r;

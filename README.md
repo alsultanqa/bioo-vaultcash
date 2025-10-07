@@ -1,44 +1,27 @@
-# QatarCash – Ultimate
+# QatarCash — GitHub Expanded
 
-## تشغيل سريع (Docker)
+حل متكامل جاهز بالكامل للعمل على GitHub:
+- **Dashboard** (Next.js) يُنشر تلقائيًا على **GitHub Pages** عبر Workflow.
+- **CI**: تشغيل اختبارات الباك-إند وبناء Prisma.
+- **Backend**: يبني صورة Docker ويُدفع إلى **GitHub Container Registry (GHCR)**.
+- **Migrate (يدوي)**: Workflow محمي لتطبيق الـMigrations على قاعدة الإنتاج.
+
+> قبل التشغيل: أضف الـSecrets المطلوبة في إعدادات المستودع → Settings → Secrets and variables → Actions
+
+## Secrets المطلوبة
+- `QC_API_BASE` : عنوان الـAPI العلني للباك-إند (مثال: `https://api.example.com` أو `http://localhost:3001` للتجربة).
+- `DATABASE_URL` : رابط Postgres للإنتاج (فقط لو تُريد استخدام Workflow الهجرة).
+- `GHCR_PAT` : توكن شخصي (أو استخدم GITHUB_TOKEN مع أذونات packages: write) لدفع الصورة إلى GHCR.
+- (اختياري) `JWT_SECRET`, `WEBHOOK_SECRET` إن رغبت اختبار الهجرة ضد بيئة فعلية.
+
+## نصيحة التسمية
+- لو اسم مستودعك `qatarchash`, فإن GitHub Pages سيكون تحت: `https://<username>.github.io/qatarchash/`.
+- Workflow الضبط يأخذ هذا في الاعتبار تلقائيًا باستخدام `BASE_PATH`.
+
+## تشغيل محلي سريع
 ```bash
 docker compose up --build
+# Dashboard: http://localhost:3000/login
+# Backend:   http://localhost:3001/health
+# Login: owner@qatarchash.local / ChangeMe123!
 ```
-- Backend: http://localhost:3001/health
-- Dashboard: http://localhost:3000/login
-- دخول: owner@qatarchash.local / ChangeMe123!
-
-## محلي بدون Docker
-```bash
-# Backend
-cd backend
-cp .env.example .env
-npm ci
-npx prisma generate
-npm run db:migrate
-npm run seed
-npm run dev
-
-# Dashboard
-cd ../dashboard
-export NEXT_PUBLIC_API_BASE="http://localhost:3001"
-npm ci
-npm run dev
-```
-
-## CI
-- GitHub Actions: `.github/workflows/ci.yml`
-
-## إنتاج
-- صور Docker-prod: `backend/Dockerfile.prod` و `dashboard/Dockerfile.prod`
-- Compose: `docker-compose.prod.yml`
-- Kubernetes: `infra/k8s/*` (أنشئ الأسرار: JWT_SECRET و WEBHOOK_SECRET)
-- Terraform: `infra/terraform/*` (نشر الواجهة عبر S3+CloudFront)
-
-## API
-- OpenAPI: `backend/openapi.yaml`
-- Webhooks: HMAC `X-QC-SIGN` باستخدام `WEBHOOK_SECRET`
-
-## ملاحظات
-- غيّر ALLOWED_ORIGINS وドومينات الإنتاج قبل الإطلاق.
-- افحص السجلات في جدول AuditLog لأي عملية حساسة.
