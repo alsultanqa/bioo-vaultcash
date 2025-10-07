@@ -28,3 +28,7 @@ export function requireRole(...roles: JwtUser['role'][]){
     next();
   };
 }
+
+export function hasRole(u: JwtUser|undefined, ...roles: JwtUser['role'][]){
+  return !!u && roles.includes(u.role);
+}

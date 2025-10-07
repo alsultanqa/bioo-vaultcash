@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: QatarCash API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3001
+paths:
+  /auth/login:
+    post:
+      summary: Admin login (JWT)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { email: {type: string}, password: {type: string} }, required: [email, password] }
+      responses: { '200': { description: OK } }
+  /api/payment-links:
+    post:
+      summary: Create payment link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { amount: {type: integer}, currency: {type: string}, orderId: {type: string} }, required: [amount,currency,orderId] }
+      responses: { '201': { description: Created } }
+  /api/status/{token}:
+    get:
+      summary: Get payment status
+      parameters: [ { in: path, name: token, schema: {type: string}, required: true } ]
+      responses: { '200': { description: OK } }
+  /admin/payment-links:
+    get:
+      summary: List payment links (admin)
+      parameters:
+        - in: query
+          name: page
+          schema: {type: integer}
+        - in: query
+          name: pageSize
+          schema: {type: integer}
+        - in: query
+          name: q
+          schema: {type: string}
+      security: [ { bearerAuth: [] } ]
+      responses: { '200': { description: OK } }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

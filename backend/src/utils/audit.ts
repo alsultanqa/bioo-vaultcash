@@ -1,0 +1,9 @@
+import { prisma } from '../db';
+
+export async function audit(actorId: string|undefined, action: string, target?: string, meta?: any){
+  try {
+    await prisma.auditLog.create({ data: { actorId, action, target, meta } });
+  } catch (e) {
+    console.error('audit failed', e);
+  }
+}

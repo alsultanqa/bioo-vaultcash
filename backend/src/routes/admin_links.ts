@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../db';
 import { requireAuth, requireRole } from '../auth/jwt';
+import { audit } from '../utils/audit';
 
 const r = Router();
 r.use(requireAuth, requireRole('OWNER','ADMIN','FINANCE'));
@@ -25,11 +26,13 @@ r.get('/payment-links', async (req, res) => {
 r.patch('/payment-links/:token', async (req, res) => {
   const { status } = req.body || {};
   const pl = await prisma.paymentLink.update({ where: { token: req.params.token }, data: { status } });
+  await audit((req as any).user?.id, 'payment_link.update_status', pl.token, { status });
   res.json(pl);
 });
 
 r.delete('/payment-links/:token', async (req, res) => {
   await prisma.paymentLink.delete({ where: { token: req.params.token } });
+  await audit((req as any).user?.id, 'payment_link.delete', req.params.token);
   res.json({ ok: true });
 });
 
