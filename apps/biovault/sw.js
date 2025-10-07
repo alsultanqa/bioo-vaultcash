@@ -1,3 +1,5 @@
+const STATIC_CACHE = `static-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v4';
 /* sw.js — Production, 2025-08-19 */
 self.__WB_DISABLE_DEV_LOGS = true;
 
@@ -208,3 +210,14 @@ if (self.workbox) {
     event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
   });
 }
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.destination === 'document' ||
+      url.pathname.endsWith('/qatarcash-button.js') ||
+      url.pathname.endsWith('/qatarcash-button.v2.js') ||
+      url.pathname.endsWith('/qatarcash-button.v3.js')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+});

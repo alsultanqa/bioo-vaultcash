@@ -1,39 +1,166 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-
-  <!-- مهم: أخبر المتصفح أن المسار الأساسي لهذا التطبيق هو مجلد biovault -->
-  <base href="/bioo-vaultcash/apps/biovault/">
-
-  <link rel="manifest" href="./manifest.json">
-  <title>BioVault</title>
-
-  <!-- لو لديك زر قطر كاش حمّله بالإصدار المكسِّر للكاش -->
-  <script>window.QATAR_CASH_URL='/bioo-vaultcash/apps/biovault/';</script>
-  <script src="./qatarcash-button.v2.js" defer></script>
-
-  <!-- سكربت التطبيق الرئيسي -->
-  <script src="./main.js" defer></script>
-</head>
-<body>
-  <!-- ... محتوى صفحتك ... -->
-
-  <!-- تسجيل Service Worker بنطاق المجلد الحالي ./ -->
-  <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistration('./').then(r => {
-      if (!r) {
-        navigator.serviceWorker.register('./sw.js', { scope: './' })
-          .catch(console.error);
-      }
-    });
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0" />
+  <title>Ultimate TVM Ecosystem Dashboard - Balance Chain & Blockchain</title>
+  <!-- Google Font: Roboto -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <!-- Bootstrap CSS for Responsive Layout -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Chart.js for Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+  <!-- Font Awesome for Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet" />
+  <!-- DOMPurify for Sanitization -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" defer></script>
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#007bff" />
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #ffffff;
+      transition: background 0.3s;
+    }
+    .dark-mode {
+      background: linear-gradient(135deg, #121212, #1e1e1e, #333);
+    }
+        /* === Stat boxes for Bio-IBAN & Balance === */
+    .stat-box{
+      border:1px solid rgba(255,255,255,.20);
+      border-radius:12px;
+      padding:12px 16px;
+      background:rgba(255,255,255,.04);
+    }
+    .stat-label{ font-weight:600; opacity:.9; }
+    .stat-value{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
+      word-break: break-all;
+    }
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: none;
+      border-radius: 20px;
+      backdrop-filter: blur(15px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+      transition: transform 0.3s ease;
+    }
+    .card:hover { transform: scale(1.02); }
+    .btn-primary {
+      background: linear-gradient(90deg, #007bff, #00c6ff);
+      border: none;
+      border-radius: 50px;
+      font-weight: bold;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(90deg, #00c6ff, #007bff);
+    }
+    .section { display: none; padding: 50px 0; animation: fadeIn 0.8s ease-in; }
+    .active-section { display: block; }
+    .landing { text-align: center; padding: 25vh 0; }
+    .whitepaper {
+      background: rgba(0,0,0,0.6);
+      padding: 25px;
+      border-radius: 15px;
+      margin-bottom: 30px;
+    }
+    .chart-container {
+      height: 350px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 15px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.5s ease; }
+    .neon-text { text-shadow: 0 0 5px #007bff, 0 0 10px #007bff; }
+    .back-btn { border-radius: 50px; margin-top: 20px; }
+    #lockedScreen { display: block; text-align: center; padding-top: 20vh; }
+    #vaultUI { display: none; }
+    .hidden { display: none; }
+    #biovault:has(#vaultUI:not(.hidden)) > .lead,
+    #biovault:has(#vaultUI:not(.hidden)) #lockedTitle,
+    #biovault:has(#vaultUI:not(.hidden)) #enterVaultBtn,
+    #biovault:has(#vaultUI:not(.hidden)) > h2.neon-text {
+      display: none;
+    }
+    @media (max-width: 991.98px) {
+    /* Align menu to the left on mobile */
+    .navbar-collapse {
+      position: relative;
+      width: 100%;
+      padding: 0;
+      margin-top: 0.5rem; /* Small gap below navbar toggle */
+    }
+    .navbar-nav {
+      margin-left: 0 !important; /* Override ms-auto on mobile */
+      text-align: left;
+    }
+    .navbar-nav .nav-item {
+      width: 100%;
+    }
+    /* Push content down when navbar is expanded */
+    .navbar-collapse.collapsing,
+    .navbar-collapse.show {
+      padding-bottom: 1rem; /* Space below menu items */
+    }
+    body {
+      padding-top: 56px; /* Height of navbar (adjust if needed) */
+    }
+    #biovault {
+      padding-top: 0; /* Reset section padding to avoid double padding */
+    }
   }
+    table { width: 100%; }
+    /* Modal theme matching PWA */
+    .modal-content {
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #ffffff;
+      border: none;
+    }
+    .modal-header {
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .modal-footer {
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .form-control {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #ffffff;
+    }
+    .form-control:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 0.25rem rgba(0,123,255,0.25);
+    }
+    .form-label {
+      color: #ffffff;
+    }
+    .btn-close {
+      filter: invert(1);
+    }
+    .modal-dialog {
+      max-width: 90%; /* Larger size for better usability */
+    }
+  </style>
+  <!-- Safe stubs so inline onclicks don't crash before app boots -->
+  <script>
+    window.__BioVaultReady = false;
+    window.showSection = window.showSection || function(){ console.warn('[BioVault] App not ready yet.'); };
+    window.exportProofToBlockchain = window.exportProofToBlockchain || function(){ console.warn('[BioVault] App not ready yet.'); };
+    window.addEventListener('error', e => console.error('[BioVault] Uncaught:', e.error || e.message));
   </script>
-</body>
-</html>
-
+<base href="/bioo-vaultcash/apps/biovault/">
+  <script>window.QATAR_CASH_URL="/bioo-vaultcash/qc/";</script>
+  <script src="./qatarcash-button.v3.js?v=3" defer></script>
 </head>
 <body>
   <noscript><div class="alert alert-danger m-3">This app requires JavaScript.</div></noscript>
@@ -460,6 +587,14 @@ Best regards,
       }
     })();
   </script>
-  <script src="qatarcash-button.v2.js"></script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistration('./').then(r => {
+      if (!r) {
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(console.error);
+      }
+    });
+  }
+  </script>
 </body>
 </html>

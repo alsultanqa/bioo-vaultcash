@@ -1,0 +1,6 @@
+لجعل زر قطر كاش يعمل في الصفحة الرئيسية (الجذر):
+1) افتح index.html في جذر المستودع.
+2) قبل إغلاق </head> أضف:
+   <script>window.QATAR_CASH_URL='/bioo-vaultcash/qc/';</script>
+   <script src="qatarcash-button.v3.js?v=3" defer></script>
+3) احفظ وادمج (Commit).
