@@ -9,7 +9,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: your-registry/qc-backend:latest
+          image: ghcr.io/YOUR_USER/YOUR_REPO/backend:latest
           env:
             - { name: DATABASE_URL, value: "postgresql://user:pass@pg:5432/qatarchash" }
             - { name: JWT_SECRET, valueFrom: { secretKeyRef: { name: qc-secrets, key: JWT_SECRET } } }

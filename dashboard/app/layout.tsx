@@ -1,8 +1,1 @@
-export const metadata = { title: 'QatarCash Admin' };
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="ar" dir="rtl">
-      <body style={{fontFamily:'system-ui',margin:0}}>{children}</body>
-    </html>
-  );
-}
+export const metadata={title:'QatarCash Admin'}; export default function Root({children}:{children:React.ReactNode}){return(<html lang='ar' dir='rtl'><body style={{fontFamily:'system-ui',margin:0}}>{children}</body></html>);}

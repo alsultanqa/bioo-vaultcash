@@ -1,10 +1,1 @@
-import { Router } from 'express';
-import { prisma } from '../db';
-
-const r = Router();
-r.get('/:token', async (req, res) => {
-  const pl = await prisma.paymentLink.findUnique({ where: { token: req.params.token } });
-  if (!pl) return res.status(404).json({ error: 'not_found' });
-  res.json({ paymentId: pl.paymentId, status: pl.status });
-});
-export default r;
+import {Router} from 'express'; import {prisma} from '../db'; const r=Router(); r.get('/:token', async (req,res)=>{ const pl=await prisma.paymentLink.findUnique({where:{token:req.params.token}}); if(!pl) return res.status(404).json({error:'not_found'}); res.json({paymentId:pl.paymentId,status:pl.status});}); export default r;

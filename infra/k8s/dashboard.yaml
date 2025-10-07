@@ -9,14 +9,14 @@ spec:
     spec:
       containers:
         - name: app
-          image: your-registry/qc-dashboard:latest
-          env:
-            - { name: NEXT_PUBLIC_API_BASE, value: "https://your-backend-domain" }
-          ports: [ { containerPort: 3000 } ]
+          image: nginx:stable-alpine
+          ports: [ { containerPort: 80 } ]
+          volumeMounts: [ { name: web, mountPath: /usr/share/nginx/html } ]
+      volumes: [ { name: web, emptyDir: {} } ]
 ---
 apiVersion: v1
 kind: Service
 metadata: { name: qc-dashboard }
 spec:
   selector: { app: qc-dashboard }
-  ports: [ { port: 80, targetPort: 3000 } ]
+  ports: [ { port: 80, targetPort: 80 } ]
