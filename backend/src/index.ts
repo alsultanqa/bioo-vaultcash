@@ -1,55 +1,37 @@
-if (process.env.OTEL_ENABLED === '1') { import('./tracing'); }
+import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import { cfg } from './config';
-import { jsonWithRaw } from './middleware/rawBody';
+import morgan from 'morgan';
+import { json } from 'express';
+import { corsMw } from './middleware/cors';
+import { rateLimit } from './middleware/rate_limit';
 import { errorHandler } from './middleware/error';
-import payments from './routes/payments';
+
 import paymentLinks from './routes/payment_links';
-import serve from './routes/serve';
 import hosted from './routes/hosted';
 import status from './routes/status';
-import result from './routes/result';
-import reports from './routes/reports';
-import admin from './routes/admin';
-import users from './routes/users';
-import apikeys from './routes/apikeys';
-import biovaultStatic from './routes/biovault_static';
-import biovaultAdapter from './routes/biovault_adapter';
-import anchoring from './routes/anchoring';
-import merchants from './routes/merchants';
-import auth from './routes/auth';
 import webhooks from './routes/webhooks';
-import swagger from './docs/swagger';
-import { chaosMiddleware } from './middleware/chaos';
-import { metrics } from './metrics';
+import auth from './routes/auth';
+import adminLinks from './routes/admin_links';
+import apiKeys from './routes/api_keys';
 
 const app = express();
-app.use(helmet());
-app.use(cors({ origin: cfg.corsOrigin.length ? cfg.corsOrigin : true }));
-app.use(jsonWithRaw);
-app.use(chaosMiddleware);
+app.use(morgan('dev'));
+app.use(corsMw);
+app.use(rateLimit);
+app.use(json({ limit: '1mb' }));
 
-app.use(metrics);
-app.get('/health', (_req, res) => res.json({ ok: true, env: cfg.env }));
-app.use('/docs', swagger);
-app.use('/api/payments', payments);
+app.get('/health', (_req, res) => res.json({ ok: true }));
+
 app.use('/api/payment-links', paymentLinks);
-app.use('/pay', serve);
-app.use('/api/payment-links', status);
-app.use('/', result);
-app.use('/', reports);
-app.use('/', admin);
-app.use('/auth', auth);
-app.use('/', users);
-app.use('/apikeys', apikeys);
-app.use('/merchants', merchants);
-app.use('/biovault', biovaultStatic);
-app.use('/api/biovault', biovaultAdapter);
-app.use('/', anchoring);
-app.use('/checkout', hosted);
+app.use('/pay', hosted);
+app.use('/api/status', status);
 app.use('/webhooks', webhooks);
+
+app.use('/auth', auth);
+app.use('/admin', adminLinks);
+app.use('/admin/api-keys', apiKeys);
+
 app.use(errorHandler);
 
-app.listen(cfg.port, () => console.log(`QatarCash API on :${cfg.port}`));
+const port = Number(process.env.PORT || 3001);
+app.listen(port, () => console.log(`QC backend on :${port}`));

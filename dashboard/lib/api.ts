@@ -1,0 +1,12 @@
+const BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001';
+
+export function setToken(t: string){ if(typeof window !== 'undefined') localStorage.setItem('qc_jwt', t); }
+export function getToken(){ if(typeof window === 'undefined') return ''; return localStorage.getItem('qc_jwt') || ''; }
+
+export async function api(path: string, opts: RequestInit = {}){
+  const jwt = getToken();
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}), ...(jwt ? { Authorization:`Bearer ${jwt}` } : {}) };
+  const r = await fetch(`${BASE}${path}`, { ...opts, headers, cache:'no-store' });
+  if(!r.ok) throw new Error(`API ${r.status}`);
+  return r.json();
+}

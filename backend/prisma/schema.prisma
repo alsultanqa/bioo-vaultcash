@@ -1,4 +1,3 @@
-// Prisma schema for QatarCash
 generator client { provider = "prisma-client-js" }
 datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
 
@@ -7,96 +6,36 @@ model User {
   email     String   @unique
   password  String
   role      Role     @default(DEVELOPER)
-  mfaSecret String?  // base32
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
-enum Role {
-  OWNER
-  ADMIN
-  FINANCE
-  DEVELOPER
-}
+enum Role { OWNER ADMIN FINANCE DEVELOPER }
 
 model Merchant {
-  id        String   @id @default(cuid())
+  id        String   @id
   name      String
   city      String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
   apiKeys   ApiKey[]
 }
 
 model ApiKey {
-  id         String   @id @default(cuid())
-  key        String   @unique
-  label      String?
-  environment String  // test|live
-  merchant   Merchant @relation(fields: [merchantId], references: [id])
-  merchantId String
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String?
+  environment String
+  merchant    Merchant  @relation(fields: [merchantId], references: [id])
+  merchantId  String
+  createdAt   DateTime  @default(now())
 }
-
-model PaymentIntent {
-  id        String   @id @default(cuid())
-  orderId   String
-  amount    Int
-  currency  String
-  status    String    @default("created")
-  merchant  Merchant? @relation(fields: [merchantId], references: [id])
-  merchantId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  charges   Charge[]
-  refunds   Refund[]
-}
-
-model Charge {
-  id         String   @id @default(cuid())
-  paymentId  String
-  amount     Int
-  status     String
-  acquirerRef String?
-  createdAt  DateTime @default(now())
-  payment    PaymentIntent @relation(fields: [paymentId], references: [id])
-}
-
-model Refund {
-  id         String   @id @default(cuid())
-  paymentId  String
-  amount     Int
-  status     String
-  createdAt  DateTime @default(now())
-  payment    PaymentIntent @relation(fields: [paymentId], references: [id])
-}
-
-model WebhookDelivery {
-  id        String   @id @default(cuid())
-  eventId   String
-  type      String
-  payload   Json
-  deliveredAt DateTime @default(now())
-}
-
-model LedgerEntry {
-  id        String   @id @default(cuid())
-  seq       Int
-  ts        DateTime
-  ref       String
-  type      String
-  postings  Json
-}
-
 
 model PaymentLink {
-  token     String   @id
-  paymentId String
+  token       String   @id
+  paymentId   String
   checkoutUrl String
-  orderId   String
-  amount    Int
-  currency  String
-  emv       String?
-  status    String?   // last known status
-  createdAt DateTime  @default(now())
+  orderId     String
+  amount      Int
+  currency    String
+  status      String?  // created|pending|captured|failed|refunded
+  createdAt   DateTime @default(now())
 }

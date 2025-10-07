@@ -1,11 +1,10 @@
 {
-  "name": "qatarchash-dashboard",
-  "version": "0.1.0",
+  "name": "qc-dashboard",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start"
+    "start": "next start -p 3000"
   },
   "dependencies": {
     "next": "14.2.5",
