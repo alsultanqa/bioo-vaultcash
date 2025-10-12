@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QatarCash Demo UI</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>QatarCash — Demo UI</h1>
+      <div class="config">
+        <label>رابط API (EB):</label>
+        <input id="apiBase" placeholder="https://minibank-env.eba-xxxx.eu-north-1.elasticbeanstalk.com" />
+        <button id="saveBase">حفظ</button>
+      </div>
+
+      <section>
+        <h2>المستخدمون</h2>
+        <form id="userForm">
+          <input id="email" placeholder="email@example.com" required />
+          <input id="name"  placeholder="الاسم (اختياري)" />
+          <button>إضافة مستخدم</button>
+        </form>
+        <button id="loadUsers">تحديث القائمة</button>
+        <ul id="users"></ul>
+      </section>
+
+      <section>
+        <h2>المعاملات</h2>
+        <form id="txForm">
+          <input id="userId" placeholder="User ID" required />
+          <input id="amount" type="number" step="0.01" placeholder="المبلغ" required />
+          <input id="currency" value="QAR" />
+          <input id="memo" placeholder="مذكرة" />
+          <button>إنشاء معاملة</button>
+        </form>
+        <button id="loadTxs">تحديث العمليات</button>
+        <ul id="txs"></ul>
+      </section>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

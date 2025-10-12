@@ -1,62 +1,29 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String
-  role      Role     @default(OWNER)
+  name      String?
   createdAt DateTime @default(now())
-  sessions  Session[]
-  logs      AuditLog[] @relation("UserLogs")
-}
-enum Role { OWNER ADMIN FINANCE DEVELOPER }
-
-model Merchant {
-  id        String   @id
-  name      String
-  city      String?
-  createdAt DateTime @default(now())
-  apiKeys   ApiKey[]
+  updatedAt DateTime @updatedAt
+  txs       Transaction[]
 }
 
-model ApiKey {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  label       String?
-  environment String
-  merchant    Merchant  @relation(fields: [merchantId], references: [id])
-  merchantId  String
-  createdAt   DateTime  @default(now())
-}
-
-model PaymentLink {
-  token       String   @id
-  paymentId   String
-  checkoutUrl String
-  orderId     String
-  amount      Int
-  currency    String
-  status      String?
-  createdAt   DateTime @default(now())
-}
-
-model Session {
+model Transaction {
   id        String   @id @default(cuid())
-  userId    String
+  amount    Decimal
+  currency  String   @default("QAR")
+  memo      String?
+  createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
-  userAgent String?
-  ip        String?
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-}
+  userId    String
 
-model AuditLog {
-  id        String   @id @default(cuid())
-  actorId   String?
-  actor     User?    @relation("UserLogs", fields: [actorId], references: [id])
-  action    String
-  target    String?
-  meta      Json?
-  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
 }
