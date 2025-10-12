@@ -1,4 +1,5 @@
 name: Deploy Backend to Elastic Beanstalk
+
 on:
   push:
     branches: [ "main" ]
@@ -10,7 +11,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,29 +19,33 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
 
-      - name: Install deps
+      - name: Build backend
         working-directory: backend
-        run: npm ci
-
-      - name: Build (optional)
-        working-directory: backend
-        run: npm run build || echo "no build script"
-
-      - name: Zip package
         run: |
-          cd backend
-          zip -r ../backend.zip . -x "**/.git**"
+          npm ci
+          npx prisma generate || true
+          npm run build || true
+          zip -r ../backend-build.zip ./*
 
-      - name: Deploy to Elastic Beanstalk
-        uses: einaregilsson/beanstalk-deploy@v21
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name: minibank
-          environment_name: minibank-env
-          region: eu-north-1
-          version_label: v-${{ github.run_number }}
-          deployment_package: backend.zip
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Upload zip to S3 application bucket
+        run: |
+          APP_BUCKET="elasticbeanstalk-${{ vars.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }}"
+          S3_KEY="${{ vars.EB_APP_NAME }}/build-${{ github.run_number }}.zip"
+          aws s3 cp backend-build.zip s3://$APP_BUCKET/$S3_KEY
+          echo "S3_KEY=$S3_KEY" >> $GITHUB_ENV
+
+      - name: Create EB application version
+        run: |
+          aws elasticbeanstalk create-application-version             --application-name "${{ vars.EB_APP_NAME }}"             --version-label "build-${{ github.run_number }}"             --source-bundle S3Bucket="elasticbeanstalk-${{ vars.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
+
+      - name: Update EB environment
+        run: |
+          aws elasticbeanstalk update-environment             --environment-name "${{ vars.EB_ENV_NAME }}"             --version-label "build-${{ github.run_number }}"
