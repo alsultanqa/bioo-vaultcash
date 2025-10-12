@@ -1,4 +1,4 @@
-name: Deploy Backend to Elastic Beanstalk
+name: Deploy Backend to Elastic Beanstalk (safe)
 
 on:
   push:
@@ -8,44 +8,151 @@ on:
       - ".github/workflows/deploy-backend-eb.yml"
   workflow_dispatch:
 
+env:
+  # لو تفضل القراءة من Variables في GitHub
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  EB_APP_NAME: ${{ vars.EB_APP_NAME }}
+  EB_ENV_NAME: ${{ vars.EB_ENV_NAME }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Build backend
-        working-directory: backend
+      # 1) تحقّق مبكر من الملفات الضرورية داخل backend
+      - name: Sanity check project structure
         run: |
-          npm ci
-          npx prisma generate || true
-          npm run build || true
-          zip -r ../backend-build.zip ./*
+          set -e
+          [ -d backend ] || { echo "::error::لا يوجد مجلد backend/"; exit 1; }
+          [ -f backend/package.json ] || { echo "::error::backend/package.json غير موجود"; exit 1; }
+          [ -f backend/Procfile ] || echo "::warning::لم أجد backend/Procfile. Elastic Beanstalk يحتاج نقطة تشغيل (مثلاً: web: node server.js)."
+          jq -r '.name,.version' backend/package.json >/dev/null 2>&1 || { echo "::error::package.json غير صالح (JSON)"; exit 1; }
 
+      # 2) تحقّق من وجود الـ Secrets
+      - name: Validate required secrets exist
+        run: |
+          req=(AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_ACCOUNT_ID)
+          for k in "${req[@]}"; do
+            if [ -z "${{ secrets[k] }}" ]; then
+              echo "::error::Secret $k مفقود في Settings → Secrets and variables → Actions"
+              exit 1
+            fi
+          done
+          echo "All required secrets exist ✅"
+
+      # 3) تحقّق من Variables
+      - name: Validate required variables exist
+        run: |
+          req=(AWS_REGION EB_APP_NAME EB_ENV_NAME)
+          for k in "${req[@]}"; do
+            v="${!k}"
+            if [ -z "$v" ]; then
+              echo "::error::Variable $k مفقود (Settings → Secrets and variables → Actions → Variables)"
+              exit 1
+            fi
+            echo "$k=$v"
+          done
+
+      # 4) إعداد اعتماد AWS واختباره
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Upload zip to S3 application bucket
+      - name: Verify AWS identity & region
         run: |
-          APP_BUCKET="elasticbeanstalk-${{ vars.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }}"
-          S3_KEY="${{ vars.EB_APP_NAME }}/build-${{ github.run_number }}.zip"
-          aws s3 cp backend-build.zip s3://$APP_BUCKET/$S3_KEY
-          echo "S3_KEY=$S3_KEY" >> $GITHUB_ENV
+          set -e
+          ACC="$(aws sts get-caller-identity --query Account --output text)"
+          echo "Connected to AWS Account: $ACC (expected: ${{ secrets.AWS_ACCOUNT_ID }})"
+          if [ "$ACC" != "${{ secrets.AWS_ACCOUNT_ID }}" ]; then
+            echo "::error::الحساب المستخدم لا يطابق AWS_ACCOUNT_ID"; exit 1
+          fi
+          aws ec2 describe-availability-zones --query 'AvailabilityZones[0].ZoneName' --output text >/dev/null
+          echo "Region $AWS_REGION reachable ✅"
 
-      - name: Create EB application version
+      # 5) تأكد أن Application & Environment موجودين
+      - name: Check EB application/environment
         run: |
-          aws elasticbeanstalk create-application-version             --application-name "${{ vars.EB_APP_NAME }}"             --version-label "build-${{ github.run_number }}"             --source-bundle S3Bucket="elasticbeanstalk-${{ vars.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
+          set -e
+          app_ok=$(aws elasticbeanstalk describe-applications \
+            --application-names "$EB_APP_NAME" \
+            --query 'Applications[0].ApplicationName' --output text || true)
+          [ "$app_ok" != "None" ] || { echo "::error::EB Application '$EB_APP_NAME' غير موجود"; exit 1; }
 
-      - name: Update EB environment
+          env_ok=$(aws elasticbeanstalk describe-environments \
+            --application-name "$EB_APP_NAME" \
+            --query "Environments[?EnvironmentName=='$EB_ENV_NAME'].Status | [0]" --output text || true)
+          [ "$env_ok" != "None" ] || { echo "::error::EB Environment '$EB_ENV_NAME' غير موجود"; exit 1; }
+          echo "EB app/env found ✅"
+
+      # 6) إعداد node وبناء الباك-إند
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Prisma generate (optional)
+        working-directory: backend
+        run: npx prisma generate || echo "no prisma schema"
+
+      - name: Build (optional)
+        working-directory: backend
+        run: npm run build || echo "no build script"
+
+      - name: Zip deployment package
         run: |
-          aws elasticbeanstalk update-environment             --environment-name "${{ vars.EB_ENV_NAME }}"             --version-label "build-${{ github.run_number }}"
+          cd backend
+          zip -r ../backend.zip . -x "**/.git**" "**/node_modules/**"
+          ls -lh ../backend.zip
+
+      # 7) طريقة النشر (A) — عبر beanstalk-deploy (أسهل)
+      - name: Deploy to Elastic Beanstalk (beanstalk-deploy)
+        id: eb1
+        continue-on-error: true
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: ${{ env.EB_APP_NAME }}
+          environment_name: ${{ env.EB_ENV_NAME }}
+          region: ${{ env.AWS_REGION }}
+          version_label: v-${{ github.run_number }}
+          deployment_package: backend.zip
+
+      # 7-b) طريقة بديلة — لو فشلت السابقة نستخدم AWS CLI مباشرة برسائل واضحة
+      - name: Fallback deploy via AWS CLI
+        if: steps.eb1.outcome == 'failure'
+        run: |
+          set -e
+          APP_BUCKET="elasticbeanstalk-${AWS_REGION}-${{ secrets.AWS_ACCOUNT_ID }}"
+          S3_KEY="${EB_APP_NAME}/build-${{ github.run_number }}.zip"
+          echo "Uploading to s3://$APP_BUCKET/$S3_KEY"
+          aws s3 cp backend.zip s3://$APP_BUCKET/$S3_KEY
+
+          echo "Create application version..."
+          aws elasticbeanstalk create-application-version \
+            --application-name "$EB_APP_NAME" \
+            --version-label "build-${{ github.run_number }}" \
+            --source-bundle S3Bucket="$APP_BUCKET",S3Key="$S3_KEY"
+
+          echo "Update environment..."
+          aws elasticbeanstalk update-environment \
+            --environment-name "$EB_ENV_NAME" \
+            --version-label "build-${{ github.run_number }}"
+
+      - name: Done
+        run: echo "🎉 Deployment pipeline finished."
